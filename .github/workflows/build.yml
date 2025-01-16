@@ -1,45 +1,61 @@
-name: Build + Test
+name: 🛠️ Build + Test
 
-on: [push, pull_request]
+on:
+  push:
+    paths:
+      - 'build/**'
+      - 'icons/*.svg'
+      - 'patches/**'
+      - 'src/**'
+      - '.bun-version'
+      - 'bunfig.toml'
+      - 'package.json'
+      - 'sheriff.config.ts'
+      - '!*.md'
+
+  pull_request:
+    paths:
+      - 'build/**'
+      - 'icons/*.svg'
+      - 'patches/**'
+      - 'src/**'
+      - '.bun-version'
+      - 'bunfig.toml'
+      - 'package.json'
+      - 'sheriff.config.ts'
+      - '!*.md'
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write # Update issue labels
 
 jobs:
-  test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [windows-latest, ubuntu-latest]
-        node-version: [16.x]
+  build-and-test:
+    name: Build & Test Extension
 
-    name: ${{ matrix.os }} (Node.js ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout 🛎
-        uses: actions/checkout@v2
-      - name: Setup Node.js ${{ matrix.node-version }} ⚙
-        uses: actions/setup-node@v2
+      - name: 📥 Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: 🔧 Setup Bun
+        uses: oven-sh/setup-bun@4bc047ad259df6fc24a6c9b0f9a0cb08cf17fbe5 # v2
         with:
-          node-version: ${{ matrix.node-version }}
-      - name: Run display server 🖥
-        run: /usr/bin/Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 & echo "Started xvfb"
-        shell: bash
-        if: ${{ success() && matrix.os == 'ubuntu-latest' }}
-      - name: Install node_modules 📦
-        run: npm ci
-      - name: Cache node_modules 💾
-        uses: actions/cache@v2
-        env:
-          cache-name: cache-node-modules
-        with:
-          # npm cache files are stored in `~/.npm` on Linux/macOS
-          path: ~/.npm
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
-      - name: Test + Build 🚀
+          bun-version-file: ".bun-version"
+
+      - name: 📦 Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: 🚀 Test + Build
+        id: build
         run: |
-          npm test
-          npm run vscode:prepublish
+          bun test
+          bun run vscode:prepublish
+
+      - name: 🏷️ Manage label based on build result
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        run: .github/scripts/update-status-label.sh ${{ github.event.pull_request.number }} ${{ steps.build.outcome }} "❌ failed build"
         env:
-          DISPLAY: ':99.0'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

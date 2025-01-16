@@ -1,0 +1,19 @@
+🏞️ icons:
+- changed-files:
+  - any-glob-to-any-file: ['icons/*', 'src/core/icons/*.ts']
+
+💱 translations:
+- changed-files:
+  - any-glob-to-any-file: ['package.nls*.json', 'src/core/i18n']
+
+📝 docs:
+- changed-files:
+  - any-glob-to-any-file: '*.md'
+
+🔄 workflows:
+- changed-files:
+  - any-glob-to-any-file: ['.github/workflows/*', '.github/labeler.yml']
+
+🐋 devcontainers:
+- changed-files:
+  - any-glob-to-any-file: '.devcontainer/*'
